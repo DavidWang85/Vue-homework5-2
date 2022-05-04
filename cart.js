@@ -56,7 +56,10 @@ const app = Vue.createApp({
         },
         openProductModal(id){
             this.productId = id;
-            this.$refs.productModal.openModal();
+            setTimeout(() => {
+                this.$refs.productModal.openModal();
+            }, 300);
+            
         },
         getCart() {
             axios.get(`${apiUrl}/api/${apiPath}/cart`)
@@ -107,8 +110,8 @@ const app = Vue.createApp({
             };
             this.isLoadingItem = item.id;
             axios.put(`${apiUrl}/api/${apiPath}/cart/${item.id}`, { data })
-                .then(res => {
-                    console.log('put購物車', res);
+                .then(() => {
+                    console.log('put購物車', item);
                     this.getCart();
                     this.alertUpdateCartItem();
                     this.isLoadingItem = '';
@@ -223,6 +226,7 @@ app.component('product-modal', {
             this.$emit('add-cart', this.product.id, this.product.title, this.qty);
         },
         closeModal(){
+            this.qty = 1;
             this.modal.hide();
         }
     },
