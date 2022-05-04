@@ -11,10 +11,23 @@
     <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css'
         integrity='sha512-q3eWabyZPc1XTCmF+8/LuE1ozpg5xxn7iO89yfSOd5/oKvyqLngoNGsx8jq92Y8eXJ/IRxQbEC+FGSYxtk2oiw=='
         crossorigin='anonymous' />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue-loading-overlay@5.0.2/dist/vue-loading.css">
+    <link rel="stylesheet" href="./loading.css">
 </head>
 
 <body>
     <div id="app">
+        <loading :active="isLoading">
+            <div class="loadingio-spinner-blocks-i90ymh0v73c">
+                <div class="loadingio-spinner-dual-ball-yclnsn8hekp">
+                    <div class="ldio-qwpz4yjkn8d">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </div>
+                </div>
+            </div>
+        </loading>
         <div class="container">
             <div class="mt-4">
                 <!-- 產品Modal -->
@@ -50,7 +63,7 @@
                                     <button :disabled="isLoadingItem === product.id" @click="openProductModal(product.id)" type="button" class="btn btn-outline-secondary">
                                         查看更多
                                     </button>
-                                    <button :disabled="isLoadingItem === product.id" @click="addToCart(product.id)" type="button" class="btn btn-outline-danger">
+                                    <button :disabled="isLoadingItem === product.id" @click="addToCart(product.id, product.title)" type="button" class="btn btn-outline-danger">
                                         <div v-show="isLoadingItem === product.id" class="spinner-border spinner-border-sm" role="status">
                                             <span class="visually-hidden">Loading...</span>
                                         </div>
@@ -63,7 +76,7 @@
                 </table>
                 <!-- 購物車列表 -->
                 <div class="text-end">
-                    <button :disabled="isLoadingItem === 'clear'" @click="removeAllCarts()" class="btn btn-outline-danger" type="button">清空購物車</button>
+                    <button :class="{disabled: cartData.carts.length === 0}" :disabled="isLoadingItem === 'clear'" @click="removeAllCarts()" class="btn btn-outline-danger" type="button">清空購物車</button>
                 </div>
                 <table class="table align-middle">
                     <thead>
@@ -78,7 +91,7 @@
                         <template v-if="cartData.carts">
                             <tr v-for="item in cartData.carts" :key="item.id">
                                 <td>
-                                    <button :disabled="isLoadingItem === item.id" @click="removeCartItem(item.id)" type="button" class="btn btn-outline-danger btn-sm">
+                                    <button :disabled="isLoadingItem === item.id" @click="removeCartItem(item.id, item.product.title)" type="button" class="btn btn-outline-danger btn-sm">
                                         x
                                     </button>
                                 </td>
@@ -115,43 +128,43 @@
                 </table>
             </div>
             <div class="my-5 row justify-content-center">
-                <!-- <v-form ref="form" class="col-md-6" v-slot="{ errors }">
+                <v-form ref="form" class="col-md-6" v-slot="{ errors }" @submit="createOrder"> 
                     <div class="mb-3">
                         <label for="email" class="form-label">Email</label>
-                        <v-field id="email" name="email" type="email" class="form-control"
+                        <v-field id="email" v-model="form.user.email"  name="email" type="email" class="form-control" rules="required|email"
                             :class="{ 'is-invalid': errors['email'] }" placeholder="請輸入 Email"></v-field>
                         <error-message name="email" class="invalid-feedback"></error-message>
                     </div>
 
                     <div class="mb-3">
                         <label for="name" class="form-label">收件人姓名</label>
-                        <v-field id="name" name="姓名" type="text" class="form-control"
+                        <v-field id="name" v-model="form.user.name" name="姓名" type="text" class="form-control"
                             :class="{ 'is-invalid': errors['姓名'] }" placeholder="請輸入姓名" rules="required"></v-field>
                         <error-message name="姓名" class="invalid-feedback"></error-message>
                     </div>
 
                     <div class="mb-3">
                         <label for="tel" class="form-label">收件人電話</label>
-                        <v-field id="tel" name="電話" type="text" class="form-control"
-                            :class="{ 'is-invalid': errors['電話'] }" placeholder="請輸入電話"></v-field>
+                        <v-field id="tel" v-model="form.user.tel" name="電話" type="tel" class="form-control" rules="required"
+                            :class="{ 'is-invalid': errors['電話'] }" placeholder="請輸入電話" rules="required|min:8|max:10"></v-field>
                         <error-message name="電話" class="invalid-feedback"></error-message>
                     </div>
 
                     <div class="mb-3">
                         <label for="address" class="form-label">收件人地址</label>
-                        <v-field id="address" name="地址" type="text" class="form-control"
+                        <v-field id="address" v-model="form.user.address" name="地址" type="text" class="form-control"
                             :class="{ 'is-invalid': errors['地址'] }" placeholder="請輸入地址" rules="required"></v-field>
                         <error-message name="地址" class="invalid-feedback"></error-message>
                     </div>
 
                     <div class="mb-3">
                         <label for="message" class="form-label">留言</label>
-                        <textarea id="message" class="form-control" cols="30" rows="10"></textarea>
+                        <textarea id="message" v-model="form.message" class="form-control" cols="30" rows="10"></textarea>
                     </div>
                     <div class="text-end">
-                        <button type="submit" class="btn btn-danger">送出訂單</button>
+                        <button :class="{disabled: Object.keys(errors).length > 0 || cartData.carts.length === 0}" type="submit" class="btn btn-danger">送出訂單</button>
                     </div>
-                </v-form> -->
+                </v-form> 
             </div>
         </div>
     </div>
@@ -207,10 +220,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.min.js"
         integrity="sha384-j0CNLUeiqtyaRmlzUHCPZ+Gy5fQu0dQ6eZ/xAww941Ai1SxSY+0EQqNXNE6DZiVc"
         crossorigin="anonymous"></script>
+        <!-- 外部套件 -->
     <script src="https://unpkg.com/vue@next"></script>
     <script src="https://unpkg.com/vee-validate@next"></script>
     <script src="https://unpkg.com/@vee-validate/i18n@4.1.0"></script>
     <script src="https://unpkg.com/@vee-validate/rules"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-loading-overlay@5.0.2/dist/vue-loading.min.js"></script>
     <script src="./cart.js" type="module"></script>
 </body>
 

@@ -1,23 +1,57 @@
-import { createApp } from 'https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.29/vue.esm-browser.min.js';
-
 const apiUrl = 'https://vue3-course-api.hexschool.io/v2';
 const apiPath = 'david-frontend';
 
-const app = createApp({
+const { defineRule, Form, Field, ErrorMessage, configure } = VeeValidate;
+const { required, email, min, max } = VeeValidateRules;
+const { localize, loadLocaleFromURL } = VeeValidateI18n; 
+
+
+defineRule('required', required);
+defineRule('email', email);
+defineRule('min', min);
+defineRule('max', max);
+
+loadLocaleFromURL('https://unpkg.com/@vee-validate/i18n@4.1.0/dist/locale/zh_TW.json');
+
+configure({ // 用來做一些設定
+    generateMessage: localize('zh_TW'), //啟用 locale
+});
+
+const app = Vue.createApp({
+    components: {
+        VForm: Form,
+        VField: Field,
+        ErrorMessage: ErrorMessage,
+    },
     data(){
         return{
-            cartData:{},
+            isLoading: false,
+            fullPage: true,
+            cartData:{
+                carts:[],
+            },
             products: [],
             productId: '',
             isLoadingItem: '',
+            form: {
+                user: {
+                    name: '',
+                    email: '',
+                    tel: '',
+                    address: '',
+                },
+                message: '',
+            },
         }
     },
     methods:{
         getProducts(){
+            this.isLoading = true;
             axios.get(`${apiUrl}/api/${apiPath}/products/all`)
                 .then(res =>{
                     this.products = res.data.products;
                     console.log(this.products);
+                    this.isLoading = false;
                 })
         },
         openProductModal(id){
@@ -31,7 +65,7 @@ const app = createApp({
                     this.cartData = res.data.data;
                 })
         },
-        addToCart(id, qty=1){
+        addToCart(id, name, qty=1){
             const data = {
                 product_id : id,
                 qty,
@@ -42,15 +76,17 @@ const app = createApp({
                     console.log(res);
                     this.getCart();
                     this.$refs.productModal.closeModal();
+                    this.alertAddToCart(name);
                     this.isLoadingItem = '';
                 })
         },
-        removeCartItem(id){
+        removeCartItem(id, name){
             this.isLoadingItem = id;
             axios.delete(`${apiUrl}/api/${apiPath}/cart/${id}`)
                 .then(res => {
                     console.log('刪除', res);
                     this.getCart();
+                    this.alertRemoveCartItem(name);
                     this.isLoadingItem = '';
                 })
         },
@@ -60,6 +96,7 @@ const app = createApp({
                 .then(res => {
                     console.log('刪除全部', res);
                     this.getCart();
+                    this.alertRemoveAllCart();
                     this.isLoadingItem = '';
                 })
         },
@@ -73,9 +110,81 @@ const app = createApp({
                 .then(res => {
                     console.log('put購物車', res);
                     this.getCart();
+                    this.alertUpdateCartItem();
                     this.isLoadingItem = '';
                 })
         },
+        createOrder() {
+            const order = this.form;
+            axios.post(`${apiUrl}/api/${apiPath}/order`, { data: order })
+                .then(() => {
+                    this.alertCreateOrder();
+                    this.$refs.form.resetForm();
+                    this.getCart();
+                })
+                .catch((err) => {
+                    alert(err.data.message);
+                });
+        },
+        alertAddToCart(name) {
+            //加入購物車顯示
+            Swal.fire({
+                toast: true,  //啟用吐司框
+                title: `商品 ${name} <br>已成功加入購物車`,
+                position: 'top-end', //位置
+                timer: 2000,   //倒數計時
+                showConfirmButton: false,
+                // color: "#663224",
+                icon: "success"
+            });
+        },
+        alertRemoveAllCart() {
+            Swal.fire({
+                toast: true,  //啟用吐司框
+                title: "購物車已清空",
+                position: 'top-end', //位置
+                timer: 2000,   //倒數計時
+                showConfirmButton: false,
+                // color: "#663224",
+                icon: "info"
+            });
+        },
+        alertRemoveCartItem(name) {
+            Swal.fire({
+                toast: true,  //啟用吐司框
+                title: `商品 ${name} 以刪除`,
+                position: 'top-end', //位置
+                timer: 1500,   //倒數計時
+                showConfirmButton: false,
+                // color: "#663224",
+                icon: "info"
+            });
+        },
+        alertCreateOrder() {
+            Swal.fire({
+                title: "訂單建立完成",
+                text: "期待與你/妳的相遇",
+                showConfirmButton: true,
+                // color: "#663224",
+                icon: "success",
+                confirmButtonColor: "#008000",
+            });
+        },
+        alertUpdateCartItem() {
+            Swal.fire({
+                toast: true,  //啟用吐司框
+                title: `商品數量已更新`,
+                position: 'top-end', //位置
+                timer: 2000,   //倒數計時
+                showConfirmButton: false,
+                // color: "#663224",
+                icon: "success"
+            });
+        },
+        // addLoading() {
+        //     // #2. 作為元件呼叫
+        //     this.isLoading = true
+        // }
     },
     mounted(){
         this.getProducts();
@@ -111,7 +220,7 @@ app.component('product-modal', {
                 })
         },
         addToCart() {
-            this.$emit('add-cart', this.product.id, this.qty);
+            this.$emit('add-cart', this.product.id, this.product.title, this.qty);
         },
         closeModal(){
             this.modal.hide();
@@ -121,4 +230,5 @@ app.component('product-modal', {
         this.modal = new bootstrap.Modal(this.$refs.modal);
     }
 })
+app.component('loading', VueLoading.Component);
 app.mount('#app');
